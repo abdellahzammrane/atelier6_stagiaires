@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des Stagiaires</title>
+</head>
+<body>
+    <h1>Liste des Stagiaires</h1>
+    <div id="liste"></div>
+
+    <script>
+        async function chargerStagiaires() {
+            try {
+                const response = await fetch('/api/liste.php');
+                const stagiaires = await response.json();
+                const listeDiv = document.getElementById('liste');
+                
+                stagiaires.forEach(stagiaire => {
+                    const div = document.createElement('div');
+                    div.style.borderBottom = "1px solid #ccc";
+                    div.style.padding = "10px 0";
+                    div.innerHTML = `
+                        <h3>${stagiaire.prenom} ${stagiaire.nom} (${stagiaire.ville})</h3>
+                        <img src="${stagiaire.photo}" alt="Photo" width="150" style="border-radius: 8px;">
+                        <p>Inscrit le: ${stagiaire.date_inscription}</p>
+                    `;
+                    listeDiv.appendChild(div);
+                });
+            } catch (error) {
+                document.getElementById('liste').innerText = "Erreur lors du chargement des données.";
+            }
+        }
+        chargerStagiaires();
+    </script>
+</body>
+</html>

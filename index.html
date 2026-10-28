@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Inscription Stagiaire</title>
+</head>
+<body>
+    <h1>Inscription Stagiaire</h1>
+    <form id="inscriptionForm" enctype="multipart/form-data">
+        <label>Nom: <input type="text" name="nom" required></label><br><br>
+        <label>Prénom: <input type="text" name="prenom" required></label><br><br>
+        <label>Ville: <input type="text" name="ville" required></label><br><br>
+        <label>Photo: <input type="file" name="photo" accept="image/*" required></label><br><br>
+        <button type="submit">Inscrire</button>
+    </form>
+    <div id="message" style="margin-top: 20px; font-weight: bold;"></div>
+
+    <script>
+        document.getElementById('inscriptionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const response = await fetch('/api/inscrire.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById('message').innerText = result.message || result.error;
+            } catch (error) {
+                document.getElementById('message').innerText = "Erreur de connexion serveur.";
+            }
+        });
+    </script>
+</body>
+</html>
