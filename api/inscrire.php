@@ -52,5 +52,18 @@ try {
     respond(200, ['message' => 'Inscription reussie.']);
 } catch (Throwable $e) {
     error_log('Inscription stagiaire failed: ' . $e->getMessage());
-    respond(500, ['error' => 'Inscription impossible. Verifiez la configuration Cloudinary et de la base de donnees.']);
+
+    if (strpos($e->getMessage(), 'Missing database environment variables:') === 0) {
+        $message = $e->getMessage() . ' Configure these values in Vercel.';
+    } elseif (strpos($e->getMessage(), 'DATABASE_URL') === 0) {
+        $message = $e->getMessage() . ' Check the Aiven connection URL in Vercel.';
+    } elseif ($e->getMessage() === 'CLOUDINARY_URL is not configured.') {
+        $message = 'CLOUDINARY_URL is missing. Add it to the Vercel environment variables.';
+    } elseif ($e instanceof PDOException) {
+        $message = 'Aiven rejected the database connection or insert. Check the Aiven credentials, CA certificate, and stagiaires table.';
+    } else {
+        $message = 'Cloudinary upload or database insert failed. Check the Vercel function logs.';
+    }
+
+    respond(500, ['error' => $message]);
 }

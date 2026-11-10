@@ -10,26 +10,63 @@
 
     <script>
         async function chargerStagiaires() {
+            const listeDiv = document.getElementById('liste');
+
             try {
                 const response = await fetch('/api/liste.php');
-                const stagiaires = await response.json();
-                const listeDiv = document.getElementById('liste');
-                
-                stagiaires.forEach(stagiaire => {
+                const responseText = await response.text();
+                const contentType = response.headers.get('content-type') || '';
+
+                if (!contentType.includes('application/json')) {
+                    if (response.ok) {
+                        throw new Error("L'API PHP ne s'execute pas sur cette adresse. Utilisez l'URL Vercel ou lancez un serveur PHP.");
+                    }
+                    throw new Error(`Reponse API invalide (HTTP ${response.status}).`);
+                }
+
+                let stagiaires;
+                try {
+                    stagiaires = JSON.parse(responseText);
+                } catch {
+                    throw new Error(`L'API a renvoye du JSON invalide (HTTP ${response.status}).`);
+                }
+
+                if (!response.ok) {
+                    throw new Error(stagiaires.error || `Erreur HTTP ${response.status}.`);
+                }
+                if (!Array.isArray(stagiaires)) {
+                    throw new Error(stagiaires.error || "L'API n'a pas renvoye une liste de stagiaires.");
+                }
+                if (stagiaires.length === 0) {
+                    listeDiv.textContent = 'Aucun stagiaire inscrit.';
+                    return;
+                }
+
+                stagiaires.forEach((stagiaire) => {
                     const div = document.createElement('div');
-                    div.style.borderBottom = "1px solid #ccc";
-                    div.style.padding = "10px 0";
-                    div.innerHTML = `
-                        <h3>${stagiaire.prenom} ${stagiaire.nom} (${stagiaire.ville})</h3>
-                        <img src="${stagiaire.photo}" alt="Photo" width="150" style="border-radius: 8px;">
-                        <p>Inscrit le: ${stagiaire.date_inscription}</p>
-                    `;
+                    div.style.borderBottom = '1px solid #ccc';
+                    div.style.padding = '10px 0';
+
+                    const titre = document.createElement('h3');
+                    titre.textContent = `${stagiaire.prenom ?? ''} ${stagiaire.nom ?? ''} (${stagiaire.ville ?? ''})`;
+
+                    const image = document.createElement('img');
+                    image.src = stagiaire.photo ?? '';
+                    image.alt = 'Photo';
+                    image.width = 150;
+                    image.style.borderRadius = '8px';
+
+                    const date = document.createElement('p');
+                    date.textContent = `Inscrit le: ${stagiaire.date_inscription ?? ''}`;
+
+                    div.append(titre, image, date);
                     listeDiv.appendChild(div);
                 });
             } catch (error) {
-                document.getElementById('liste').innerText = "Erreur lors du chargement des données.";
+                listeDiv.textContent = error.message || 'Erreur lors du chargement des donnees.';
             }
         }
+
         chargerStagiaires();
     </script>
 </body>

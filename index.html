@@ -26,11 +26,18 @@
                     body: formData
                 });
                 const responseText = await response.text();
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    if (response.ok) {
+                        throw new Error("L'API PHP ne s'execute pas sur cette adresse. Utilisez l'URL Vercel ou lancez un serveur PHP.");
+                    }
+                    throw new Error(`Reponse API invalide (HTTP ${response.status}).`);
+                }
                 let result;
                 try {
                     result = JSON.parse(responseText);
                 } catch {
-                    throw new Error(`Le serveur a repondu avec une erreur (HTTP ${response.status}).`);
+                    throw new Error(`L'API a renvoye du JSON invalide (HTTP ${response.status}).`);
                 }
                 if (!response.ok) {
                     throw new Error(result.error || `Erreur HTTP ${response.status}.`);
