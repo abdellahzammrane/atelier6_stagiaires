@@ -1,10 +1,27 @@
 <?php
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ob_start();
 header('Content-Type: application/json; charset=utf-8');
 
 function respond(int $status, array $payload): void
 {
+    if (ob_get_level() > 0) {
+        $unexpectedOutput = ob_get_contents();
+        if ($unexpectedOutput !== false && trim($unexpectedOutput) !== '') {
+            error_log('Unexpected output was discarded from the registration API response.');
+        }
+        ob_clean();
+    }
+
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($json === false) {
+        $status = 500;
+        $json = '{"error":"Could not encode API response."}';
+    }
+
     http_response_code($status);
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    echo $json;
     exit;
 }
 
