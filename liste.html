@@ -2,11 +2,61 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Liste des Stagiaires</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: #f3f6fb;
+            color: #1f2937;
+            font-family: Arial, sans-serif;
+        }
+        main { max-width: 900px; margin: 0 auto; }
+        h1 { margin: 0 0 12px; color: #17345c; font-size: 30px; }
+        .back-link { display: inline-block; margin-bottom: 24px; color: #1d4ed8; }
+        .list-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 18px;
+        }
+        .stagiaire-card {
+            overflow: hidden;
+            padding: 16px;
+            background: #fff;
+            border: 1px solid #e1e7f0;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(25, 52, 92, .07);
+        }
+        .stagiaire-card h2 { margin: 0 0 12px; color: #17345c; font-size: 19px; }
+        .stagiaire-photo {
+            display: block;
+            width: 100%;
+            max-height: 260px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .stagiaire-date { margin: 12px 0 0; color: #64748b; font-size: 14px; }
+        .notice {
+            padding: 14px 16px;
+            border-radius: 8px;
+            background: #fff;
+            color: #334155;
+        }
+        .notice.error { background: #fff1f2; color: #9f1239; }
+        @media (max-width: 480px) {
+            body { padding: 28px 14px; }
+            h1 { font-size: 26px; }
+        }
+    </style>
 </head>
 <body>
-    <h1>Liste des Stagiaires</h1>
-    <div id="liste"></div>
+    <main>
+        <h1>Liste des Stagiaires</h1>
+        <a class="back-link" href="index.html">Retour à l'inscription</a>
+        <div id="liste" class="list-grid" aria-live="polite"></div>
+    </main>
 
     <script>
         async function chargerStagiaires() {
@@ -38,31 +88,32 @@
                     throw new Error(stagiaires.error || "L'API n'a pas renvoye une liste de stagiaires.");
                 }
                 if (stagiaires.length === 0) {
+                    listeDiv.className = 'notice';
                     listeDiv.textContent = 'Aucun stagiaire inscrit.';
                     return;
                 }
 
                 stagiaires.forEach((stagiaire) => {
-                    const div = document.createElement('div');
-                    div.style.borderBottom = '1px solid #ccc';
-                    div.style.padding = '10px 0';
+                    const card = document.createElement('article');
+                    card.className = 'stagiaire-card';
 
-                    const titre = document.createElement('h3');
-                    titre.textContent = `${stagiaire.prenom ?? ''} ${stagiaire.nom ?? ''} (${stagiaire.ville ?? ''})`;
+                    const title = document.createElement('h2');
+                    title.textContent = `${stagiaire.prenom ?? ''} ${stagiaire.nom ?? ''} (${stagiaire.ville ?? ''})`;
 
                     const image = document.createElement('img');
                     image.src = stagiaire.photo ?? '';
-                    image.alt = 'Photo';
-                    image.width = 150;
-                    image.style.borderRadius = '8px';
+                    image.alt = `Photo de ${stagiaire.prenom ?? ''} ${stagiaire.nom ?? ''}`;
+                    image.className = 'stagiaire-photo';
 
                     const date = document.createElement('p');
-                    date.textContent = `Inscrit le: ${stagiaire.date_inscription ?? ''}`;
+                    date.textContent = `Inscrit le : ${stagiaire.date_inscription ?? ''}`;
+                    date.className = 'stagiaire-date';
 
-                    div.append(titre, image, date);
-                    listeDiv.appendChild(div);
+                    card.append(title, image, date);
+                    listeDiv.appendChild(card);
                 });
             } catch (error) {
+                listeDiv.className = 'notice error';
                 listeDiv.textContent = error.message || 'Erreur lors du chargement des donnees.';
             }
         }
