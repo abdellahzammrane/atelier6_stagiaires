@@ -1,13 +1,31 @@
 <?php
 function getDatabase(): PDO
 {
+    $required = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+    $missing = [];
+
+    foreach ($required as $key) {
+        $value = getenv($key);
+        if ($value === false || $value === '') {
+            $missing[] = $key;
+        }
+    }
+
+    if ($missing) {
+        throw new RuntimeException('Missing database environment variables: ' . implode(', ', $missing));
+    }
+
     $host = getenv('DB_HOST');
-    $port = getenv('DB_PORT');
+    $port = getenv('DB_PORT') ?: '3306';
     $name = getenv('DB_NAME');
     $user = getenv('DB_USER');
     $password = getenv('DB_PASSWORD');
     $caPath = dirname(__DIR__) . '/certs/ca.pem';
-    
+
+    if (!is_readable($caPath)) {
+        throw new RuntimeException('Database CA certificate is missing or unreadable: ' . $caPath);
+    }
+
     $dsn = "mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4";
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -16,6 +34,6 @@ function getDatabase(): PDO
         PDO::MYSQL_ATTR_SSL_CA => $caPath,
         PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true
     ];
-    
+
     return new PDO($dsn, $user, $password, $options);
 }

@@ -1,40 +1,56 @@
 <?php
-require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../config/db.php';
+header('Content-Type: application/json; charset=utf-8');
 
-use Cloudinary\Configuration\Configuration;
-use Cloudinary\Api\Upload\UploadApi;
+function respond(int $status, array $payload): void
+{
+    http_response_code($status);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
-header('Content-Type: application/json');
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Allow: POST');
+    respond(405, ['error' => 'Methode non autorisee.']);
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nom = $_POST['nom'] ?? '';
-    $prenom = $_POST['prenom'] ?? '';
-    $ville = $_POST['ville'] ?? '';
-    $photo = $_FILES['photo'] ?? null;
+$nom = isset($_POST['nom']) && is_string($_POST['nom']) ? trim($_POST['nom']) : '';
+$prenom = isset($_POST['prenom']) && is_string($_POST['prenom']) ? trim($_POST['prenom']) : '';
+$ville = isset($_POST['ville']) && is_string($_POST['ville']) ? trim($_POST['ville']) : '';
+$photo = $_FILES['photo'] ?? null;
 
-    if ($nom && $prenom && $ville && $photo && $photo['tmp_name']) {
-        try {
-            Configuration::instance(getenv('CLOUDINARY_URL'));
-            $upload = (new UploadApi())->upload($photo['tmp_name'], [
-                'folder' => 'stagiaires'
-            ]);
-            $photoUrl = $upload['secure_url'];
+if ($nom === '' || $prenom === '' || $ville === '' || !is_array($photo)) {
+    respond(400, ['error' => 'Veuillez remplir tous les champs et choisir une photo.']);
+}
 
-            $pdo = getDatabase();
-            $stmt = $pdo->prepare("INSERT INTO stagiaires (nom, prenom, ville, photo) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$nom, $prenom, $ville, $photoUrl]);
+if (($photo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($photo['tmp_name'])) {
+    respond(400, ['error' => 'Le televersement de la photo a echoue. Choisissez une autre image.']);
+}
 
-            echo json_encode(['message' => 'Stagiaire inscrit avec succès']);
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Erreur: ' . $e->getMessage()]);
-        }
-    } else {
-        http_response_code(400);
-        echo json_encode(['error' => 'Veuillez remplir tous les champs']);
+try {
+    require __DIR__ . '/../vendor/autoload.php';
+    require __DIR__ . '/../config/db.php';
+
+    $cloudinaryUrl = getenv('CLOUDINARY_URL');
+    if ($cloudinaryUrl === false || $cloudinaryUrl === '') {
+        throw new RuntimeException('CLOUDINARY_URL is not configured.');
     }
-} else {
-    http_response_code(405);
-    echo json_encode(['error' => 'Méthode non autorisée']);
+
+    \Cloudinary\Configuration\Configuration::instance($cloudinaryUrl);
+    $upload = (new \Cloudinary\Api\Upload\UploadApi())->upload($photo['tmp_name'], [
+        'folder' => 'stagiaires'
+    ]);
+    $photoUrl = $upload['secure_url'] ?? null;
+
+    if (!$photoUrl) {
+        throw new RuntimeException('Cloudinary did not return a secure image URL.');
+    }
+
+    $pdo = getDatabase();
+    $stmt = $pdo->prepare('INSERT INTO stagiaires (nom, prenom, ville, photo) VALUES (?, ?, ?, ?)');
+    $stmt->execute([$nom, $prenom, $ville, $photoUrl]);
+
+    respond(200, ['message' => 'Inscription reussie.']);
+} catch (Throwable $e) {
+    error_log('Inscription stagiaire failed: ' . $e->getMessage());
+    respond(500, ['error' => 'Inscription impossible. Verifiez la configuration Cloudinary et de la base de donnees.']);
 }

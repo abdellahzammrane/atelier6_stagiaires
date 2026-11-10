@@ -24,10 +24,22 @@
                     method: 'POST',
                     body: formData
                 });
-                const result = await response.json();
-                document.getElementById('message').innerText = result.message || result.error;
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch {
+                    throw new Error(`Le serveur a repondu avec une erreur (HTTP ${response.status}).`);
+                }
+                if (!response.ok) {
+                    throw new Error(result.error || `Erreur HTTP ${response.status}.`);
+                }
+                document.getElementById('message').innerText = result.message || 'Inscription terminee.';
             } catch (error) {
-                document.getElementById('message').innerText = "Erreur de connexion serveur.";
+                const message = error instanceof TypeError
+                    ? "Impossible de joindre l'API. Verifiez que le serveur PHP est lance."
+                    : error.message;
+                document.getElementById('message').innerText = message || "Une erreur est survenue pendant l'inscription.";
             }
         });
     </script>
